@@ -1,0 +1,1 @@
+This project is for Solana Hackathon 2026
