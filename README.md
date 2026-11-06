@@ -1,1 +1,1 @@
-This project is for Solana Hackathon 2026 lsjdfhalsdjfhkfjhs
+This project is for Solana Hackathon 2026
