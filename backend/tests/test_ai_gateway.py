@@ -9,6 +9,7 @@ from app.services import ai_gateway
 from app.services.ai_gateway import (
     FallbackPaymentTextAnalyzer,
     OpenAIPaymentTextAnalyzer,
+    OllamaPaymentTextAnalyzer,
     build_payment_text_analyzer,
 )
 
@@ -155,3 +156,9 @@ def test_analyzer_uses_local_fallback_without_api_key() -> None:
     analyzer = build_payment_text_analyzer(Settings(openai_api_key=None))
 
     assert isinstance(analyzer, FallbackPaymentTextAnalyzer)
+
+
+def test_analyzer_selects_ollama_without_a_hosted_key() -> None:
+    analyzer = build_payment_text_analyzer(Settings(ai_provider="ollama"))
+
+    assert isinstance(analyzer, OllamaPaymentTextAnalyzer)

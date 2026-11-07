@@ -8,10 +8,10 @@ Manifest V3 popup for quick, user initiated payment request analysis. It matches
 2. Turn on **Developer mode**.
 3. Choose **Load unpacked** and select this `extension` folder.
 4. Open the extension and use the gear button to enter your backend URL and website URL.
-5. Choose **Save connection** and grant access to that backend origin.
+5. Choose **Save connection** and grant access to that backend origin. Alternatively, the first **Analyze request** click can authorize the prefilled local backend.
 6. Paste text or select text on a page and use **Use selection**, then choose **Analyze request**.
 
-For local development, enter `http://localhost:8000` for the API and `http://localhost:5173` for the site. For a deployed backend, enter its HTTPS origin. The backend must allow the extension origin in CORS (`chrome-extension://<extension-id>`); a stable Chrome extension ID is needed for deployment configuration.
+For local development, enter `http://127.0.0.1:8001` for the API and `http://localhost:5173` for the site. Click **Save connection** once and grant the requested backend permission. The local launcher accepts Chrome extension origins in development CORS. For a deployed backend, enter its HTTPS origin; configure the stable extension origin (`chrome-extension://<extension-id>`) in backend CORS.
 
 ## Shared backend contract
 

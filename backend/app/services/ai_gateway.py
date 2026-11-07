@@ -222,11 +222,100 @@ class OpenAIPaymentTextAnalyzer:
         )
 
 
+class OllamaPaymentTextAnalyzer:
+    """Local Ollama adapter; no API key or hosted provider is required."""
+
+    def __init__(self, base_url: str, model: str, timeout_seconds: float) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._model = model
+        self._timeout_seconds = timeout_seconds
+        self._fallback = FallbackPaymentTextAnalyzer()
+
+    async def analyze(self, text: str) -> AIAnalysis:
+        local = await self._fallback.analyze(text)
+        try:
+            async with httpx.AsyncClient(
+                timeout=self._timeout_seconds,
+                follow_redirects=False,
+            ) as client:
+                response = await client.post(
+                    f"{self._base_url}/api/chat",
+                    json={
+                        "model": self._model,
+                        "messages": [
+                            {"role": "system", "content": _SYSTEM_PROMPT},
+                            {"role": "user", "content": text},
+                        ],
+                        "format": _Findings.model_json_schema(),
+                        "stream": False,
+                        "options": {"temperature": 0},
+                    },
+                )
+                response.raise_for_status()
+                content = response.json()["message"]["content"]
+            findings = _Findings.model_validate_json(content)
+        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+            return local.model_copy(
+                update={
+                    "status": AIStatus.UNAVAILABLE,
+                    "explanation": (
+                        "The local AI model was unavailable. Local text checks remain available; "
+                        "verify the recipient independently."
+                    ),
+                }
+            )
+
+        indicators = list(local.indicators)
+        seen_codes = {indicator.code for indicator in indicators}
+        for finding in findings.indicators:
+            if (
+                finding.code in seen_codes
+                or not finding.evidence
+                or finding.evidence not in text
+            ):
+                continue
+            indicators.append(
+                Indicator(
+                    code=finding.code,
+                    category=finding.category,
+                    severity=IndicatorSeverity(finding.severity),
+                    source=IndicatorSource.AI,
+                    message=finding.message,
+                    evidence=finding.evidence,
+                    next_action=finding.next_action,
+                )
+            )
+            seen_codes.add(finding.code)
+
+        count = len(indicators)
+        explanation = (
+            f"Analysis identified {count} potential warning pattern(s). Review the quoted "
+            "evidence and verify the payment through a trusted channel; this is not a "
+            "determination of fraud."
+            if count
+            else "No specific warning pattern was supported by the submitted text. This does not "
+            "verify the recipient or establish that the payment is safe."
+        )
+        return AIAnalysis(
+            performed=True,
+            status=AIStatus.OK,
+            indicators=indicators,
+            explanation=explanation,
+        )
+
+
 def build_payment_text_analyzer(settings: Settings) -> PaymentTextAnalyzer:
     """Select the configured AI adapter, otherwise keep analysis fully local."""
 
+    if settings.ai_provider == "ollama":
+        return OllamaPaymentTextAnalyzer(
+            base_url=settings.ollama_base_url,
+            model=settings.ollama_model,
+            timeout_seconds=settings.ai_timeout_seconds,
+        )
+
     api_key = (settings.openai_api_key or "").strip()
-    if not api_key:
+    if settings.ai_provider != "openai" or not api_key:
         return FallbackPaymentTextAnalyzer()
     return OpenAIPaymentTextAnalyzer(
         api_key=api_key,

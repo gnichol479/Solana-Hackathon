@@ -36,4 +36,28 @@ Git.
 
 ## AI analysis
 
-The backend runs deterministic message checks by default. To enable optional AI-assisted findings, set OPENAI_API_KEY and OPENAI_MODEL in the backend environment. Each model finding must include an exact quote from the submitted text; unsupported quotes are discarded. If the provider is unavailable, local checks still run and the response reports that AI analysis was unavailable. Submitted text is sent to OpenAI only when a key is configured. Never commit .env files or API keys.
+The backend can use local Ollama, OpenAI, or only deterministic checks. Each
+model finding must include an exact quote from the submitted text; unsupported
+quotes are discarded. If the selected provider is unavailable, local checks
+still run and the response reports that AI analysis was unavailable.
+
+For the no-cost local setup, install Ollama for Windows, run `ollama pull
+llama3.2`, and use these backend settings:
+
+```env
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3.2
+```
+
+The Ollama API stays on the local machine. The backend never sends the request
+to a hosted AI provider when `AI_PROVIDER=ollama`.
+
+The OpenAI option remains available by setting `AI_PROVIDER=openai`,
+`OPENAI_API_KEY`, and `OPENAI_MODEL`. Never commit `.env` files or API keys.
+
+After setting the key, restart the backend and check `GET /api/health` for
+`"ai_configured": true`. A successful analysis then reports
+`ai_analysis.performed: true` and `ai_analysis.status: "ok"`; a missing or
+failed provider remains visible as a local fallback instead of blocking the
+analysis.

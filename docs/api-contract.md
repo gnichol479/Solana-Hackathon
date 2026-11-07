@@ -3,9 +3,17 @@
 The website and Chrome extension use the same backend contract. Request bodies
 must not contain private keys, seed phrases, or unnecessary personal data.
 
+For local development, the extension calls `http://127.0.0.1:8001` and sends
+`Origin: chrome-extension://<extension-id>`. The development backend accepts
+valid Chrome extension origins; production deployments should allow only the
+specific published extension ID.
+
 ## `GET /api/health`
 
-Returns backend availability and the configured Solana network.
+Returns backend availability, the configured Solana network, the selected AI
+provider, and whether that provider is configured. `ai_configured` reports
+configuration only; the analysis response reports whether a provider call
+actually completed.
 
 ## `POST /api/analyze`
 

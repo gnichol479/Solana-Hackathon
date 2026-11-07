@@ -1,4 +1,4 @@
-const DEFAULT_API = 'http://localhost:8000';
+const DEFAULT_API = 'http://127.0.0.1:8001';
 const DEFAULT_SITE = 'http://localhost:5173';
 const $ = (id) => document.getElementById(id);
 const input = $('request-text');
@@ -33,6 +33,27 @@ function clearError() {
   $('error-message').textContent = '';
 }
 
+function defaultedConnection(saved) {
+  const storedApiUrl = saved.apiUrl === 'http://localhost:8000' ? DEFAULT_API : (saved.apiUrl || DEFAULT_API);
+  return {
+    apiUrl: normalizeOrigin(storedApiUrl, 'backend'),
+    siteUrl: normalizeOrigin(saved.siteUrl || DEFAULT_SITE, 'website')
+  };
+}
+
+async function ensureConnection(saved) {
+  const connection = defaultedConnection(saved);
+  const origins = [`${connection.apiUrl}/*`];
+  const hasPermission = await chrome.permissions.contains({ origins });
+  if (!hasPermission) {
+    const granted = await chrome.permissions.request({ origins });
+    if (!granted) throw new Error('Backend access was not granted. Save the connection in settings before analyzing.');
+  }
+  await chrome.storage.local.set(connection);
+  $('connection-label').textContent = `Connected · ${new URL(connection.apiUrl).host}`;
+  return connection;
+}
+
 function setBusy(busy) {
   analyzeButton.disabled = busy;
   $('selection-button').disabled = busy;
@@ -65,10 +86,12 @@ function displayReport(data, siteUrl) {
 }
 
 async function loadSettings() {
-  const { apiUrl = '', siteUrl = '' } = await chrome.storage.local.get(['apiUrl', 'siteUrl']);
+  const { apiUrl: storedApiUrl = '', siteUrl: storedSiteUrl = '' } = await chrome.storage.local.get(['apiUrl', 'siteUrl']);
+  const apiUrl = storedApiUrl === 'http://localhost:8000' ? DEFAULT_API : (storedApiUrl || DEFAULT_API);
+  const siteUrl = storedSiteUrl || DEFAULT_SITE;
   $('api-url').value = apiUrl;
   $('site-url').value = siteUrl;
-  $('connection-label').textContent = apiUrl ? `Connected · ${new URL(apiUrl).host}` : 'Backend not configured';
+  $('connection-label').textContent = storedApiUrl && storedApiUrl !== 'http://localhost:8000' ? `Connected · ${new URL(apiUrl).host}` : 'Local backend ready · save connection';
 }
 
 $('settings-toggle').addEventListener('click', () => {
@@ -121,15 +144,12 @@ analyzeButton.addEventListener('click', async () => {
   setBusy(true);
   try {
     const saved = await chrome.storage.local.get(['apiUrl', 'siteUrl']);
-    if (!saved.apiUrl) throw new Error('Connect your team backend first. Open the settings above and enter its URL.');
-    const apiUrl = normalizeOrigin(saved.apiUrl, 'backend');
-    const permission = await chrome.permissions.contains({ origins: [`${apiUrl}/*`] });
-    if (!permission) throw new Error('Backend access permission is missing. Open settings and save the connection again.');
+    const connection = await ensureConnection(saved);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
     let response;
     try {
-      response = await fetch(`${apiUrl}/api/analyze`, {
+      response = await fetch(`${connection.apiUrl}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, source: 'extension' }),
@@ -142,7 +162,7 @@ analyzeButton.addEventListener('click', async () => {
     let data;
     try { data = await response.json(); } catch { throw new Error('The backend returned an unreadable response.'); }
     if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'The service could not complete this request.');
-    displayReport(data, saved.siteUrl || DEFAULT_SITE);
+    displayReport(data, connection.siteUrl);
   } catch (error) { showError(error.message || 'Something went wrong. Please try again.'); }
   finally { setBusy(false); }
 });

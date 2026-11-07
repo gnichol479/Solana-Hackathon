@@ -5,6 +5,7 @@ import {examples, exampleGroups, demoReport, validateReport, explorerLink} from 
 import './style.css';
 import './features.css';
 import './examples.css';
+import './ui-cleanup.css';
 import Features, {ExtractedDetails, SaveReport} from './Features';
 import {extractPayment} from './payment';
 import {scanImage} from './scanner';

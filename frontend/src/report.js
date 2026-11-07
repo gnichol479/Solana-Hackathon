@@ -35,11 +35,24 @@ export function demoReport(text) {
 }
 export function validateReport(data) {
   if (!data || !['suspicious','needs_verification','no_major_warnings_detected'].includes(data.risk_level) || typeof data.summary !== 'string' || !Array.isArray(data.indicators) || data.indicators.some(i=>!i || typeof i.message!=='string')) throw new Error('The server returned an unsupported report format. Please ask your backend teammate to check the shared API contract.');
+  const normalizedIndicators=data.indicators.map(indicator=>{const baseType=indicator.type||indicator.code||indicator.category||'finding';return {...indicator,type:indicator.source==='ai'?`${indicatorSourceLabel(indicator.source)} · ${baseType}`:baseType,severity:indicator.severity==='critical'?'high':indicator.severity,phrase:indicator.phrase??indicator.evidence??null,action:indicator.action??indicator.next_action??null};});
+  if (!data.demo && data.ai_analysis) {const status=aiStatus(data);normalizedIndicators.push({code:'analysis_method',category:'analysis',severity:'info',source:status.kind==='ai'?'ai':'deterministic',type:status.label.toLowerCase(),message:status.detail,evidence:null,next_action:null,phrase:null,action:null});}
   return {
     ...data,
-    indicators:data.indicators.map(indicator=>({...indicator,type:indicator.type||indicator.code||indicator.category||'finding',severity:indicator.severity==='critical'?'high':indicator.severity,phrase:indicator.phrase??indicator.evidence??null,action:indicator.action??indicator.next_action??null})),
+    indicators:normalizedIndicators,
     solana_analysis:data.solana_analysis?{...data.solana_analysis,transaction_count:data.solana_analysis.transaction_count??data.solana_analysis.recent_transaction_count??null,known_scam_reports:data.solana_analysis.known_scam_reports??null}:data.solana_analysis,
   };
+}
+export function aiStatus(report) {
+  if (report?.demo) return {label:'LOCAL CHECKS',detail:'This illustrative report was generated in the browser. No AI or backend analysis ran.',kind:'local'};
+  const ai=report?.ai_analysis;
+  if (!ai) return {label:'SERVER ANALYSIS',detail:'The shared backend returned no AI status. Review the findings and verify the recipient independently.',kind:'unknown'};
+  if (ai.performed===true && ai.status==='ok') return {label:'AI-ASSISTED',detail:ai.explanation||'AI findings were validated and combined with local checks.',kind:'ai'};
+  if (ai.status==='unavailable') return {label:'AI UNAVAILABLE · LOCAL CHECKS',detail:ai.explanation||'The AI provider was unavailable. Local checks remain available.',kind:'unavailable'};
+  return {label:'LOCAL FALLBACK',detail:ai.explanation||'Local checks ran. Configure an AI provider key to enable AI-assisted findings.',kind:'local'};
+}
+export function indicatorSourceLabel(source) {
+  return ({ai:'AI signal',deterministic:'Local signal',solana:'Solana signal'})[source]||'Signal';
 }
 export function explorerLink(address, network) {
   if (typeof address!=='string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return null;

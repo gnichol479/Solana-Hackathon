@@ -23,11 +23,14 @@ SUPPORTED_DOCUMENT_TYPES = {"application/pdf", "image/png", "image/jpeg"}
 
 
 @router.get("/health")
-async def health() -> dict[str, str]:
+async def health() -> dict[str, str | bool]:
     return {
         "status": "ok",
         "environment": settings.app_env,
         "solana_network": settings.solana_network,
+        "ai_provider": settings.ai_provider,
+        "ai_configured": settings.ai_provider == "ollama"
+        or bool((settings.openai_api_key or "").strip()),
     }
 
 
