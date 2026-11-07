@@ -21,7 +21,7 @@ Copy `.env.example` to `.env.local`. Set `VITE_API_BASE_URL` to Person 1's analy
 
 The website sends `POST /api/analyze` with `{ "text": "...", "source": "website" }` and displays the briefing's shared response structure. Accepted risk levels: `suspicious`, `needs_verification`, `no_major_warnings_detected`. The backend should avoid exposing raw submissions in logs and return understandable failures.
 
-Optional uploads: set `VITE_ENABLE_DOCUMENT_UPLOAD=true` only after coordinating `POST /api/analyze-document` with Person 1. The current multipart contract sends `file` plus optional `text`; the backend must validate file type and size and implement extraction. The browser allows PDF, PNG, JPG up to 10 MB.
+Document uploads are supported when `VITE_ENABLE_DOCUMENT_UPLOAD=true`. Images are OCR'd in the browser and their reviewed text is sent to the shared analysis route; PDFs use `POST /api/analyze-document` for bounded text extraction. The multipart contract sends `file` plus optional reviewed `text`; the backend validates file type and size. The browser allows PDF, PNG, JPG up to 10 MB.
 
 Without an API origin, all results are visibly labeled demonstrations using simple local text rules. Demo mode does not run AI or Solana RPC. It does not invent wallet history, amounts, or recipient identities. No submissions are stored by this frontend. Requests go to the configured backend only when a user submits.
 
@@ -49,6 +49,6 @@ The Account Security, Previous Reports and Blockchain Lookup screens use real AP
 
 A separately implemented service lives in `../account-service/` with setup/deployment instructions. It includes email/password login, server-verified WebAuthn, salted PIN hashing with lockouts, CSRF-protected HttpOnly sessions, private opt-in report storage/deletion, read-only Solana RPC, and an optional AI adapter. Coordinate adoption with Person 1. Password recovery requires SMTP, and live AI requires a server-side API key. The static Sites deployment does not execute Python.
 
-For local account integration, use `VITE_ACCOUNT_API_BASE_URL=http://localhost:8002`, run the account service, and open the frontend at **http://localhost:5173**. Keep `VITE_API_BASE_URL` pointed at Person 1's backend if you also want its analysis/Solana routes. Use the same frontend hostname as the account service's configured Origin/RP ID. The local analysis-method selector remains available without an AI key.
+For a complete local run, use `start-all.cmd`; it starts the shared analysis/Solana backend on port 8001, the account service on port 8002, and the frontend on port 5173. Use the same frontend hostname as the account service's configured Origin/RP ID. The local analysis-method selector remains available without an AI key.
 
 See `../docs/feature-status.md` for implemented features and limits. Guest reports stay in memory; account reports are saved only when the user chooses Save. No Chrome extension is implemented here.

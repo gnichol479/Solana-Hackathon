@@ -16,18 +16,18 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8001
 ```
 
 WSL and Phantom are not required for this read-only backend.
 
-Open the interactive API documentation at `http://127.0.0.1:8000/docs`.
+Open the interactive API documentation at `http://127.0.0.1:8001/docs`.
 
 ## Example request
 
 ```powershell
 $body = @{ text = "Send 100 USDC to 11111111111111111111111111111111"; source = "website" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/analyze -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8001/api/analyze -ContentType 'application/json' -Body $body
 ```
 
 The default network is Devnet. Set `SOLANA_NETWORK` and `SOLANA_RPC_URL` in a

@@ -151,3 +151,8 @@ def test_ai_drops_invented_evidence_and_keeps_untrusted_text_separate(client,mon
     assert captured['messages'][0]['role']=='system'
     assert len(result['indicators'])==1 and result['indicators'][0]['phrase']=='Send money today'
     assert result['solana_analysis']['performed'] is False
+
+def test_saved_report_accepts_shared_backend_indicator_shape():
+    report=service.Report.model_validate({'analysis_id':'live','risk_level':'suspicious','summary':'Review the request.','payment_type':'solana','indicators':[{'code':'wallet_warning','category':'solana','severity':'critical','source':'solana','message':'Review this wallet.','evidence':'send immediately','next_action':'Confirm independently.'}]})
+    assert report.indicators[0].code=='wallet_warning'
+    assert report.indicators[0].evidence=='send immediately'

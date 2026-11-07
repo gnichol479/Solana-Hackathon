@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Query
+from io import BytesIO
+
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from pypdf import PdfReader
 
 from app.config import SolanaNetwork, get_settings
 from app.models.schemas import AnalysisRequest, AnalysisResponse, SolanaAnalysis
@@ -15,6 +18,8 @@ router = APIRouter(prefix="/api")
 settings = get_settings()
 solana_service = SolanaAnalysisService(settings)
 ai_analyzer = build_payment_text_analyzer(settings)
+MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
+SUPPORTED_DOCUMENT_TYPES = {"application/pdf", "image/png", "image/jpeg"}
 
 
 @router.get("/health")
@@ -26,8 +31,7 @@ async def health() -> dict[str, str]:
     }
 
 
-@router.post("/analyze", response_model=AnalysisResponse)
-async def analyze(request: AnalysisRequest) -> AnalysisResponse:
+async def _analyze_text(request: AnalysisRequest, extracted_text: str | None = None) -> AnalysisResponse:
     detection = detect_payment_request(request.text)
     ai_analysis = await ai_analyzer.analyze(request.text)
 
@@ -54,7 +58,48 @@ async def analyze(request: AnalysisRequest) -> AnalysisResponse:
         payment_details=detection.payment_details,
         ai_analysis=ai_analysis,
         solana_analysis=solana_analysis,
+        extracted_text=extracted_text,
     )
+
+
+@router.post("/analyze", response_model=AnalysisResponse)
+async def analyze(request: AnalysisRequest) -> AnalysisResponse:
+    return await _analyze_text(request)
+
+
+@router.post("/analyze-document", response_model=AnalysisResponse)
+async def analyze_document(
+    file: UploadFile = File(...),
+    text: str | None = Form(default=None),
+) -> AnalysisResponse:
+    """Analyze a user-selected document without retaining its bytes.
+
+    Images are OCR'd in the browser and send their reviewed text here. PDFs
+    can be text-extracted server-side when the browser has no OCR text to send.
+    """
+    if file.content_type not in SUPPORTED_DOCUMENT_TYPES:
+        raise HTTPException(status_code=415, detail="Choose a PDF, PNG, or JPG document.")
+
+    raw = await file.read(MAX_DOCUMENT_BYTES + 1)
+    if len(raw) > MAX_DOCUMENT_BYTES:
+        raise HTTPException(status_code=413, detail="Choose a document under 10 MB.")
+
+    extracted = (text or "").strip()
+    if file.content_type == "application/pdf" and not extracted:
+        try:
+            reader = PdfReader(BytesIO(raw), strict=False)
+            extracted = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail="The PDF text could not be extracted.") from exc
+
+    if not extracted:
+        raise HTTPException(
+            status_code=422,
+            detail="No readable text was supplied. Use Screenshot & QR to OCR an image, then review it before analysis.",
+        )
+
+    validated = AnalysisRequest(text=extracted, source="website")
+    return await _analyze_text(validated, extracted_text=extracted)
 
 
 @router.get("/solana/wallet/{address}", response_model=SolanaAnalysis)
