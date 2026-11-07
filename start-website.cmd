@@ -16,5 +16,6 @@ if not exist node_modules (
     exit /b 1
   )
 )
+if not defined VITE_ACCOUNT_API_BASE_URL set "VITE_ACCOUNT_API_BASE_URL=http://localhost:8002"
 call npm run dev
 pause

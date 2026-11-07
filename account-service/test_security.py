@@ -3,7 +3,9 @@ from pathlib import Path
 os.environ['LENS_INSECURE_LOCAL']='1'
 os.environ['LENS_ORIGIN']='http://localhost:5173'
 os.environ['LENS_RP_ID']='localhost'
-os.environ['LENS_DB']=str(Path(__file__).parent.parent/'.tools'/'test-bootstrap.sqlite3')
+test_db_dir=Path(__file__).parent.parent/'.tools'
+test_db_dir.mkdir(parents=True,exist_ok=True)
+os.environ['LENS_DB']=str(test_db_dir/'test-bootstrap.sqlite3')
 import pytest, cbor2
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes

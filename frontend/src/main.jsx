@@ -6,10 +6,8 @@ import './style.css';
 import './features.css';
 import Features, {ExtractedDetails, SaveReport} from './Features';
 import {extractPayment} from './payment';
-import {request} from './api';
+import {API,ACCOUNT_API,accountRequest} from './api';
 const featurePages=['scan','verify','wallet','account','history','setup-passkey'];
-
-const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/,'');
 const uploadEnabled = Boolean(API) && import.meta.env.VITE_ENABLE_DOCUMENT_UPLOAD==='true';
 const labels = {suspicious:'Suspicious',needs_verification:'Needs verification',no_major_warnings_detected:'No major warnings detected'};
 
@@ -19,7 +17,7 @@ function App(){
  const [user,setUser]=useState(null);
  const [analysisMode,setAnalysisMode]=useState(API?'server':'local');
  useEffect(()=>{const update=()=>setPage(location.hash.slice(1).split('?')[0]||'account');window.addEventListener('hashchange',update);return()=>window.removeEventListener('hashchange',update)},[]);
- useEffect(()=>{if(!API)return;let active=true;async function refresh(){try{const r=await request('/api/auth/me');if(active)setUser(r.user)}catch{if(active)setUser(null)}}refresh();const timer=setInterval(refresh,60000);return()=>{active=false;clearInterval(timer)}},[]);
+ useEffect(()=>{if(!ACCOUNT_API)return;let active=true;async function refresh(){try{const r=await accountRequest('/api/auth/me');if(active)setUser(r.user)}catch{if(active)setUser(null)}}refresh();const timer=setInterval(refresh,60000);return()=>{active=false;clearInterval(timer)}},[]);
  function navigate(next){setPage(next);location.hash=next;window.scrollTo({top:0,behavior:'smooth'});}
  async function analyze(event){event.preventDefault();setError('');if(!text.trim()&&!file){setError('Paste a payment request to begin.');return;}setBusy(true);setReport(null);
   try{let data;if(analysisMode==='local'){await new Promise(r=>setTimeout(r,650));data=demoReport(text);}else{const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),30000);try{const body=file?new FormData():JSON.stringify({text:text.trim(),source:'website'});if(file){body.append('file',file);if(text.trim())body.append('text',text.trim());}const response=await fetch(`${API}/api/${file?'analyze-document':'analyze'}`,{method:'POST',headers:file?{}:{'Content-Type':'application/json'},body,signal:controller.signal});if(!response.ok)throw new Error(`Analysis could not be completed (server ${response.status}). Please try again.`);data=validateReport(await response.json());}finally{clearTimeout(timer);}}setReport({...data,extracted:extractPayment(text)});setTimeout(()=>resultRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),50);
