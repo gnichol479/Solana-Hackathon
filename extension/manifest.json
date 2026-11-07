@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Payment Lens — Check Before You Pay",
+  "version": "1.0.0",
+  "description": "Take a second look at a payment request before you send money.",
+  "action": {
+    "default_title": "Check with Payment Lens",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"]
+}
