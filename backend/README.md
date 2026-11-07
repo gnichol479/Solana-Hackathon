@@ -34,9 +34,6 @@ The default network is Devnet. Set `SOLANA_NETWORK` and `SOLANA_RPC_URL` in a
 local `.env` file for another configured network. Keep RPC credentials out of
 Git.
 
-## Current integration boundary
+## AI analysis
 
-`app/services/ai_gateway.py` contains a deterministic fallback analyzer so the
-backend works before the separate AI module is ready. Person 2's structured
-analyzer can replace `FallbackPaymentTextAnalyzer` without changing the API
-response contract.
+The backend runs deterministic message checks by default. To enable optional AI-assisted findings, set OPENAI_API_KEY and OPENAI_MODEL in the backend environment. Each model finding must include an exact quote from the submitted text; unsupported quotes are discarded. If the provider is unavailable, local checks still run and the response reports that AI analysis was unavailable. Submitted text is sent to OpenAI only when a key is configured. Never commit .env files or API keys.

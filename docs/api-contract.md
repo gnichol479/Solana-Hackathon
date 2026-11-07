@@ -37,7 +37,8 @@ Response shape:
       "severity": "warning",
       "source": "deterministic",
       "message": "The request appears to involve Solana, but no wallet address was identified.",
-      "evidence": null
+      "evidence": null,
+      "next_action": "Confirm the wallet address with the recipient through a trusted channel."
     }
   ],
   "payment_details": {
@@ -50,7 +51,7 @@ Response shape:
     "performed": false,
     "status": "fallback",
     "indicators": [],
-    "explanation": "The AI module is not configured yet; only basic deterministic message checks ran."
+    "explanation": "Local text checks ran. Configure an AI provider key to enable optional AI-assisted findings."
   },
   "solana_analysis": {
     "performed": false,
@@ -66,6 +67,10 @@ Response shape:
   }
 }
 ```
+
+Indicators may include evidence with an exact quote from the request and a next_action recommendation. AI findings without a verbatim quote are omitted.
+
+The backend runs deterministic checks without a provider key. Optional AI-assisted analysis uses OPENAI_API_KEY, OPENAI_MODEL, and AI_TIMEOUT_SECONDS from the backend environment. Provider errors leave local checks available and set the AI status to unavailable.
 
 `risk_level` is one of:
 

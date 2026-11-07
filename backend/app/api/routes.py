@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 
 from app.config import SolanaNetwork, get_settings
 from app.models.schemas import AnalysisRequest, AnalysisResponse, SolanaAnalysis
-from app.services.ai_gateway import FallbackPaymentTextAnalyzer
+from app.services.ai_gateway import build_payment_text_analyzer
 from app.services.payment_detection import detect_payment_request
 from app.services.risk import compose_risk
 from app.services.solana_analysis import SolanaAnalysisService, build_not_run_result
@@ -14,7 +14,7 @@ from app.services.solana_analysis import SolanaAnalysisService, build_not_run_re
 router = APIRouter(prefix="/api")
 settings = get_settings()
 solana_service = SolanaAnalysisService(settings)
-ai_analyzer = FallbackPaymentTextAnalyzer()
+ai_analyzer = build_payment_text_analyzer(settings)
 
 
 @router.get("/health")
