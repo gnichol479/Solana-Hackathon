@@ -78,6 +78,7 @@ class Indicator(BaseModel):
     source: IndicatorSource
     message: str
     evidence: str | None = None
+    next_action: str | None = Field(default=None, max_length=1_000)
 
 
 class AIAnalysis(BaseModel):
@@ -133,3 +134,4 @@ class AnalysisResponse(BaseModel):
     payment_details: PaymentDetails
     ai_analysis: AIAnalysis
     solana_analysis: SolanaAnalysis
+    extracted_text: str | None = None

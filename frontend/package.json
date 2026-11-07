@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test src/report.test.js src/payment.test.js"
+    "test": "node --test src/api.test.js src/report.test.js src/payment.test.js"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",

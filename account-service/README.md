@@ -12,10 +12,10 @@ python -m venv .venv
 $env:LENS_INSECURE_LOCAL='1'
 $env:LENS_ORIGIN='http://localhost:5173'
 $env:LENS_RP_ID='localhost'
-.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8002
 ```
 
-Set `VITE_API_BASE_URL=http://localhost:8000` in the frontend's `.env.local`, restart the frontend, and browse **http://localhost:5173** (use the same hostname throughout). The service accepts only the exact configured Origin for writes. Run `python -m pytest -q` to run the isolated security tests. Project-local installed dependencies are also available at `../.tools/backend-env/Scripts/python.exe` on this development machine.
+Set `VITE_ACCOUNT_API_BASE_URL=http://localhost:8002` in the frontend's `.env.local`, restart the frontend, and browse **http://localhost:5173** (use the same hostname throughout). The service accepts only the exact configured Origin for writes. Run `python -m pytest -q` to run the isolated security tests. Project-local installed dependencies are also available at `../.tools/backend-env/Scripts/python.exe` on this development machine.
 
 Environment variables are read from the process environment; `.env.example` is a reference, not automatically loaded. Database files must stay out of Git.
 

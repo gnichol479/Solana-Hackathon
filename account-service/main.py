@@ -267,11 +267,16 @@ def authentication_verify(body:PasskeyVerify,request:Request,response:Response):
     return signed_in(response,user,'passkey',request)
 
 class Indicator(BaseModel):
-    type:str=Field(max_length=100)
-    severity:Literal['info','warning','high']
+    model_config=ConfigDict(extra='ignore')
+    type:str|None=Field(default=None,max_length=100)
+    code:str|None=Field(default=None,max_length=100)
+    category:str|None=Field(default=None,max_length=100)
+    severity:Literal['info','warning','high','critical']
     message:str=Field(max_length=1500)
     phrase:str|None=Field(default=None,max_length=500)
+    evidence:str|None=Field(default=None,max_length=500)
     action:str|None=Field(default=None,max_length=1000)
+    next_action:str|None=Field(default=None,max_length=1000)
 class Report(BaseModel):
     model_config=ConfigDict(extra='ignore')
     analysis_id:str=Field(max_length=150)

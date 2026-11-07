@@ -16,5 +16,8 @@ if not exist node_modules (
     exit /b 1
   )
 )
+if not defined VITE_API_BASE_URL set "VITE_API_BASE_URL=http://127.0.0.1:8001"
+if not defined VITE_ACCOUNT_API_BASE_URL set "VITE_ACCOUNT_API_BASE_URL=http://localhost:8002"
+if not defined VITE_ENABLE_DOCUMENT_UPLOAD set "VITE_ENABLE_DOCUMENT_UPLOAD=true"
 call npm run dev
 pause

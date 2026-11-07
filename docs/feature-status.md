@@ -12,7 +12,7 @@
 - Local URL structure findings for known-brand strings outside their official domain, IP hosts, embedded credentials, non-HTTPS and punycode. No website fetch, comprehensive typo detection, or reputation provider.
 - Navigation to scanner, recipient comparison, blockchain lookup, account security and report history.
 
-## Implemented but requires backend deployment/configuration
+## Integrated services
 
 - Email/password account registration/login, logout, session expiration.
 - WebAuthn passkey registration/login with actual server-side cryptographic verification. Device biometrics are controlled by the operating system.
@@ -21,11 +21,12 @@
 - Read-only Solana public RPC lookup with explicit network selection, live balances, signatures, timestamps and explorer links.
 - Optional schema-validated AI phishing adapter; requires a server API key. Each supported finding includes a quote, explanation/category and next action.
 - Password recovery requires SMTP delivery configuration.
+- The local integration launcher starts the analysis/Solana backend, account service and Vite frontend together. Document uploads accept PDFs server-side; images are OCR'd in the browser and only reviewed text is sent to analysis.
 
-The published website has no backend address or API key configured. It makes account and RPC service availability explicit. It does not simulate successful login or live blockchain/AI results. Deploying the Python service to a persistent host and setting the frontend API origin is still required. The Sites static host alone cannot run this service.
+The published static website still needs deployed backend origins and any required AI/SMTP configuration. The local `.env.local` is intentionally ignored by Git; `frontend/.env.example` documents the three integration settings. The Sites static host alone cannot run the Python services.
 
 ## Verification
 
-13 frontend tests and 10 backend tests passed. Automated tests cover payment extraction, exact fixture matches/mismatches/unknown recipients, invalid addresses, Solana Pay parsing, real generated QR decoding, upload validation and local URL indicators. Backend tests cover actual cryptographic WebAuthn registration/assertion signatures, challenge replay/expiry rejection, password/PIN authentication, lockouts, CSRF, session expiration, cross-user report protection, recovery-token revocation, unavailable RPC behavior and removal of unsupported AI quotes. Tests use generated credentials, local synthetic records and mocked remote service failures. A separate live Devnet request successfully returned a SOL balance, 10 recent signatures and a lookup timestamp. Browser checks successfully recognized the demo screenshot, decoded the demo QR, handed its requested wallet to comparison, and displayed the labeled match/mismatch outcomes. The scanner layout was inspected at 390px width. No real biometric identity or real business identity has been verified.
+17 frontend tests pass, and the shared backend/account contract additions compile cleanly. The synchronous backend detection/risk suite passes 6 tests; a pure account-service report-contract test passes. The full ASGI/TestClient suites remain incompatible with the local Python 3.14 Windows runtime because requests hang before assertions, so live Uvicorn checks cover the service boundary instead. Live checks passed for both health endpoints, JSON analysis, PDF multipart extraction, browser-OCR handoff, unsupported upload rejection, live Devnet analysis and wallet lookup, registration/login/logout, CSRF-protected report save/list/delete surface, and passkey challenge issuance. Browser checks successfully rendered analysis, OCR review, recipient comparison, live Devnet evidence, account security and report history with no console errors. No real biometric identity or real business identity has been verified.
 
 Read `account-service/README.md` for deployment conditions and privacy limits. This is a hackathon implementation, not an audited production security service.

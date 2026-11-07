@@ -3,7 +3,9 @@ from pathlib import Path
 os.environ['LENS_INSECURE_LOCAL']='1'
 os.environ['LENS_ORIGIN']='http://localhost:5173'
 os.environ['LENS_RP_ID']='localhost'
-os.environ['LENS_DB']=str(Path(__file__).parent.parent/'.tools'/'test-bootstrap.sqlite3')
+test_db_dir=Path(__file__).parent.parent/'.tools'
+test_db_dir.mkdir(parents=True,exist_ok=True)
+os.environ['LENS_DB']=str(test_db_dir/'test-bootstrap.sqlite3')
 import pytest, cbor2
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
@@ -149,3 +151,8 @@ def test_ai_drops_invented_evidence_and_keeps_untrusted_text_separate(client,mon
     assert captured['messages'][0]['role']=='system'
     assert len(result['indicators'])==1 and result['indicators'][0]['phrase']=='Send money today'
     assert result['solana_analysis']['performed'] is False
+
+def test_saved_report_accepts_shared_backend_indicator_shape():
+    report=service.Report.model_validate({'analysis_id':'live','risk_level':'suspicious','summary':'Review the request.','payment_type':'solana','indicators':[{'code':'wallet_warning','category':'solana','severity':'critical','source':'solana','message':'Review this wallet.','evidence':'send immediately','next_action':'Confirm independently.'}]})
+    assert report.indicators[0].code=='wallet_warning'
+    assert report.indicators[0].evidence=='send immediately'

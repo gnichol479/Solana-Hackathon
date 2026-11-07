@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["development", "test", "production"] = "development"
+    openai_api_key: str | None = Field(default=None, repr=False)
+    openai_model: str = "gpt-4.1-mini"
+    ai_timeout_seconds: float = Field(default=25.0, gt=0, le=60)
     solana_network: SolanaNetwork = "devnet"
     solana_rpc_url: str = "https://api.devnet.solana.com"
     solana_commitment: Literal["processed", "confirmed", "finalized"] = "finalized"

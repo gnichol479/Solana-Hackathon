@@ -2,11 +2,11 @@ This project is for Solana Hackathon 2026
 
 ## Website — Person 3
 
-The React website is in `frontend/`. On Windows, double-click `start-website.cmd`, then open the local link shown in the terminal.
+The React website is in `frontend/`. For the integrated local stack on Windows, double-click `start-all.cmd`; it starts the analysis/Solana backend on port 8001, the account service on port 8002, and the Vite website on port 5173. If you only need the static frontend, use `start-website.cmd`.
 
 It includes a landing page, request analysis, screenshot OCR, QR decoding, payment extraction, recipient wallet comparison and a Solana evidence section. Merchant examples are fictional and clearly labeled. See [frontend setup and integration instructions](frontend/README.md) and [feature status](docs/feature-status.md).
 
-An optional [account and evidence service](account-service/README.md) implements account security and protected reports without replacing Person 1's backend. Online login, AI and blockchain tools require a deployed backend connection. On this development machine, `start-account-service.cmd` launches the installed local service; follow its README to connect the frontend.
+The [account and evidence service](account-service/README.md) implements account security, passkeys/FaceID through WebAuthn, and protected reports alongside Person 1's analysis/Solana backend. Deployment still requires persistent hosting and matching frontend API origins.
 
 Solana Setup Steps:
 wsl --install
@@ -36,7 +36,7 @@ py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8001
 ```
 
 The backend is read-only on Solana for the MVP. It does not require Phantom,
