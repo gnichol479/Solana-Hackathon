@@ -13,11 +13,24 @@ Select Manage Accounts (pencil icon).
 Click + → Create New Account.
 Name it Solana Hackathon and click Create. 
 
-Phantom Help Center
-
 Then enable Devnet:
 Go to Settings → Developer Settings.
 Turn on Testnet Mode.
 Select Solana Devnet. 
 
 Phantom Help Center
+
+Backend Quick Start:
+
+```powershell
+Set-Location backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+The backend is read-only on Solana for the MVP. It does not require Phantom,
+wallet connection, private keys, or seed phrases. See [backend/README.md](backend/README.md)
+and [docs/api-contract.md](docs/api-contract.md) for the API contract.
