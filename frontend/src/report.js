@@ -24,7 +24,11 @@ export function demoReport(text) {
 }
 export function validateReport(data) {
   if (!data || !['suspicious','needs_verification','no_major_warnings_detected'].includes(data.risk_level) || typeof data.summary !== 'string' || !Array.isArray(data.indicators) || data.indicators.some(i=>!i || typeof i.message!=='string')) throw new Error('The server returned an unsupported report format. Please ask your backend teammate to check the shared API contract.');
-  return data;
+  return {
+    ...data,
+    indicators:data.indicators.map(indicator=>({...indicator,type:indicator.type||indicator.code||indicator.category||'finding'})),
+    solana_analysis:data.solana_analysis?{...data.solana_analysis,transaction_count:data.solana_analysis.transaction_count??data.solana_analysis.recent_transaction_count??null,known_scam_reports:data.solana_analysis.known_scam_reports??null}:data.solana_analysis,
+  };
 }
 export function explorerLink(address, network) {
   if (typeof address!=='string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address)) return null;

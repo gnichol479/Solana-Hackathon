@@ -95,6 +95,14 @@ class SolanaTransaction(BaseModel):
     explorer_url: str
 
 
+class LegacySolanaTransaction(BaseModel):
+    """Compatibility fields used by the existing frontend wallet panel."""
+
+    signature: str
+    blockTime: int | None = None
+    err: bool | None = None
+
+
 class SolanaAnalysis(BaseModel):
     performed: bool
     network: str
@@ -106,6 +114,12 @@ class SolanaAnalysis(BaseModel):
     recent_transactions: list[SolanaTransaction] = Field(default_factory=list)
     rpc_status: SolanaRpcStatus
     message: str | None = None
+    balance_sol: float | None = None
+    checked_at: datetime | None = None
+    transactions: list[LegacySolanaTransaction] = Field(default_factory=list)
+    tokens: list[dict[str, object]] = Field(default_factory=list)
+    transaction_count: int | None = None
+    known_scam_reports: int | None = None
 
 
 class AnalysisResponse(BaseModel):

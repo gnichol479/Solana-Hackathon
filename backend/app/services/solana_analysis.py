@@ -1,8 +1,13 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from app.config import Settings
-from app.models.schemas import SolanaAnalysis, SolanaRpcStatus, SolanaTransaction
+from app.config import Settings, SolanaNetwork
+from app.models.schemas import (
+    LegacySolanaTransaction,
+    SolanaAnalysis,
+    SolanaRpcStatus,
+    SolanaTransaction,
+)
 from app.services.payment_detection import is_valid_solana_address
 from app.services.solana_rpc import SolanaRpcClient, SolanaRpcError
 
@@ -15,10 +20,11 @@ def build_not_run_result(
     settings: Settings,
     status: SolanaRpcStatus = SolanaRpcStatus.NOT_RUN,
     message: str | None = None,
+    network: SolanaNetwork | None = None,
 ) -> SolanaAnalysis:
     return SolanaAnalysis(
         performed=False,
-        network=settings.solana_network,
+        network=network or settings.solana_network,
         rpc_status=status,
         message=message,
     )
@@ -29,35 +35,51 @@ class SolanaAnalysisService:
         self._settings = settings
         self._rpc = rpc_client or SolanaRpcClient(settings)
 
-    async def analyze(self, address: str | None) -> SolanaAnalysis:
+    async def analyze(
+        self,
+        address: str | None,
+        network: SolanaNetwork | None = None,
+    ) -> SolanaAnalysis:
+        target_network = network or self._settings.solana_network
+
         if not address:
             return build_not_run_result(
                 self._settings,
                 status=SolanaRpcStatus.MISSING_ADDRESS,
                 message="A Solana payment was detected, but no wallet address was provided.",
+                network=target_network,
             )
 
         if not is_valid_solana_address(address):
             return SolanaAnalysis(
                 performed=False,
-                network=self._settings.solana_network,
+                network=target_network,
                 wallet_address=address,
                 address_valid=False,
                 rpc_status=SolanaRpcStatus.INVALID_ADDRESS,
                 message="The supplied value is not a syntactically valid Solana address.",
             )
 
+        rpc = (
+            self._rpc
+            if target_network == self._settings.solana_network
+            else SolanaRpcClient(
+                self._settings,
+                rpc_url=self._settings.rpc_url_for_network(target_network),
+            )
+        )
+
         try:
-            account_info = await self._rpc.get_account_info(address)
-            balance_info = await self._rpc.get_balance(address)
-            signatures = await self._rpc.get_signatures_for_address(
+            account_info = await rpc.get_account_info(address)
+            balance_info = await rpc.get_balance(address)
+            signatures = await rpc.get_signatures_for_address(
                 address,
                 self._settings.solana_signature_limit,
             )
         except SolanaRpcError:
             return SolanaAnalysis(
                 performed=True,
-                network=self._settings.solana_network,
+                network=target_network,
                 wallet_address=address,
                 address_valid=True,
                 rpc_status=SolanaRpcStatus.UNAVAILABLE,
@@ -68,7 +90,7 @@ class SolanaAnalysisService:
         balance_value = balance_info.get("value")
         lamports = balance_value if isinstance(balance_value, int) else None
         sol_balance = lamports / 1_000_000_000 if lamports is not None else None
-        suffix = _explorer_suffix(self._settings.solana_network)
+        suffix = _explorer_suffix(target_network)
 
         transactions: list[SolanaTransaction] = []
         for item in signatures:
@@ -92,6 +114,19 @@ class SolanaAnalysisService:
                 )
             )
 
+        legacy_transactions = [
+            LegacySolanaTransaction(
+                signature=transaction.signature,
+                blockTime=(
+                    int(transaction.block_time.timestamp())
+                    if transaction.block_time is not None
+                    else None
+                ),
+                err=transaction.status == "failed",
+            )
+            for transaction in transactions
+        ]
+
         account_message = (
             "The address is syntactically valid and returned account data on the selected network."
             if account_exists
@@ -100,7 +135,7 @@ class SolanaAnalysisService:
 
         return SolanaAnalysis(
             performed=True,
-            network=self._settings.solana_network,
+            network=target_network,
             wallet_address=address,
             address_valid=True,
             account_exists=account_exists,
@@ -109,4 +144,8 @@ class SolanaAnalysisService:
             recent_transactions=transactions,
             rpc_status=SolanaRpcStatus.OK,
             message=account_message,
+            balance_sol=sol_balance,
+            checked_at=datetime.now(timezone.utc),
+            transactions=legacy_transactions,
+            transaction_count=len(transactions),
         )

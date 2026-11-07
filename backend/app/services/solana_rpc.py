@@ -10,8 +10,9 @@ class SolanaRpcError(RuntimeError):
 
 
 class SolanaRpcClient:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, rpc_url: str | None = None) -> None:
         self._settings = settings
+        self._rpc_url = rpc_url or settings.solana_rpc_url
 
     async def call(self, method: str, params: list[Any]) -> Any:
         payload = {
@@ -23,7 +24,7 @@ class SolanaRpcClient:
 
         try:
             async with httpx.AsyncClient(timeout=self._settings.solana_timeout_seconds) as client:
-                response = await client.post(self._settings.solana_rpc_url, json=payload)
+                response = await client.post(self._rpc_url, json=payload)
                 response.raise_for_status()
                 body = response.json()
         except (httpx.HTTPError, ValueError) as exc:
