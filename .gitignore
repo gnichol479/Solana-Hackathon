@@ -3,9 +3,14 @@ dist/
 .tools/
 .env
 .env.local
+.env.*
+!.env.example
 *.log
 *.sqlite3
 *.sqlite3-journal
 __pycache__/
 .pytest_cache/
 .venv/
+*.py[cod]
+.coverage
+htmlcov/
