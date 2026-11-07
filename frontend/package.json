@@ -1,0 +1,25 @@
+{
+  "name": "payment-lens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test src/report.test.js src/payment.test.js"
+  },
+  "dependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
+    "bs58": "^6.0.0",
+    "jsqr": "^1.4.0",
+    "lucide-react": "^0.468.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "vite": "^6.1.0"
+  }
+}

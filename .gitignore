@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.tools/
+.env
+.env.local
+*.log
+*.sqlite3
+*.sqlite3-journal
+__pycache__/
+.pytest_cache/
+.venv/
