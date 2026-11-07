@@ -78,7 +78,7 @@ Response shape:
 
 Indicators may include evidence with an exact quote from the request and a next_action recommendation. AI findings without a verbatim quote are omitted.
 
-The backend runs deterministic checks without a provider key. Optional AI-assisted analysis uses OPENAI_API_KEY, OPENAI_MODEL, and AI_TIMEOUT_SECONDS from the backend environment. Provider errors leave local checks available and set the AI status to unavailable.
+The backend runs deterministic checks without a provider key. Optional AI-assisted analysis uses GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, and AI_TIMEOUT_SECONDS from the backend environment. Provider errors leave local checks available and set the AI status to unavailable. The Gemini key must stay server-side; never expose it through a `VITE_` variable.
 
 `risk_level` is one of:
 

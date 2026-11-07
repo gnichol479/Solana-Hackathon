@@ -8,7 +8,7 @@ if not exist "%PYTHON%" (
   exit /b 1
 )
 set "APP_ENV=development"
-set "AI_PROVIDER=ollama"
+set "AI_PROVIDER=gemini"
 set "SOLANA_NETWORK=devnet"
 set "ALLOWED_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173"
 set "ALLOWED_CORS_ORIGIN_REGEX=chrome-extension://[a-p]{32}"

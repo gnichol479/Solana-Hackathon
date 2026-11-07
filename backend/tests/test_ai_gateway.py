@@ -8,8 +8,7 @@ from app.models.schemas import AIStatus, IndicatorSource
 from app.services import ai_gateway
 from app.services.ai_gateway import (
     FallbackPaymentTextAnalyzer,
-    OpenAIPaymentTextAnalyzer,
-    OllamaPaymentTextAnalyzer,
+    GeminiPaymentTextAnalyzer,
     build_payment_text_analyzer,
 )
 
@@ -36,7 +35,11 @@ def _mock_provider(monkeypatch, payload: dict, captured: dict | None = None) -> 
             return None
 
         def json(self) -> dict:
-            return {"choices": [{"message": {"content": json.dumps(payload)}}]}
+            return {
+                "candidates": [
+                    {"content": {"parts": [{"text": json.dumps(payload)}]}}
+                ]
+            }
 
     class MockClient:
         def __init__(self, **kwargs) -> None:
@@ -57,7 +60,7 @@ def _mock_provider(monkeypatch, payload: dict, captured: dict | None = None) -> 
 
 
 @pytest.mark.asyncio
-async def test_provider_keeps_only_findings_with_verbatim_evidence(monkeypatch) -> None:
+async def test_gemini_keeps_only_findings_with_verbatim_evidence(monkeypatch) -> None:
     captured: dict = {}
     _mock_provider(
         monkeypatch,
@@ -85,7 +88,9 @@ async def test_provider_keeps_only_findings_with_verbatim_evidence(monkeypatch) 
     )
 
     text = "Please send the purchase funds to our requested destination."
-    result = await OpenAIPaymentTextAnalyzer("test-key", "test-model", 2).analyze(text)
+    result = await GeminiPaymentTextAnalyzer(
+        "test-key", "test-model", "https://generativelanguage.test/v1beta", 2
+    ).analyze(text)
 
     assert result.performed is True
     assert result.status == AIStatus.OK
@@ -93,13 +98,19 @@ async def test_provider_keeps_only_findings_with_verbatim_evidence(monkeypatch) 
     assert result.indicators[0].source == IndicatorSource.AI
     assert result.indicators[0].evidence == "purchase funds"
     assert result.indicators[0].next_action
-    assert captured["url"] == "https://api.openai.com/v1/chat/completions"
-    assert captured["json"]["messages"][1] == {"role": "user", "content": text}
-    assert "tools" not in captured["json"]
+    assert captured["url"] == (
+        "https://generativelanguage.test/v1beta/models/test-model:generateContent"
+    )
+    assert captured["headers"]["x-goog-api-key"] == "test-key"
+    assert captured["json"]["contents"][0]["parts"][0]["text"] == text
+    assert captured["json"]["generationConfig"]["responseMimeType"] == "application/json"
+    assert captured["json"]["generationConfig"]["responseSchema"]["required"] == [
+        "indicators"
+    ]
 
 
 @pytest.mark.asyncio
-async def test_provider_drops_finding_without_exact_quote(monkeypatch) -> None:
+async def test_gemini_drops_finding_without_exact_quote(monkeypatch) -> None:
     _mock_provider(
         monkeypatch,
         {
@@ -116,9 +127,9 @@ async def test_provider_drops_finding_without_exact_quote(monkeypatch) -> None:
         },
     )
 
-    result = await OpenAIPaymentTextAnalyzer("test-key", "test-model", 2).analyze(
-        "Please review this payment request."
-    )
+    result = await GeminiPaymentTextAnalyzer(
+        "test-key", "test-model", "https://generativelanguage.test/v1beta", 2
+    ).analyze("Please review this payment request.")
 
     assert result.status == AIStatus.OK
     assert result.indicators == []
@@ -126,7 +137,7 @@ async def test_provider_drops_finding_without_exact_quote(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_provider_failure_keeps_local_checks(monkeypatch) -> None:
+async def test_gemini_failure_keeps_local_checks(monkeypatch) -> None:
     class FailingClient:
         def __init__(self, **kwargs) -> None:
             pass
@@ -142,9 +153,9 @@ async def test_provider_failure_keeps_local_checks(monkeypatch) -> None:
 
     monkeypatch.setattr(ai_gateway.httpx, "AsyncClient", FailingClient)
 
-    result = await OpenAIPaymentTextAnalyzer("test-key", "test-model", 2).analyze(
-        "URGENT: Send the payment immediately."
-    )
+    result = await GeminiPaymentTextAnalyzer(
+        "test-key", "test-model", "https://generativelanguage.test/v1beta", 2
+    ).analyze("URGENT: Send the payment immediately.")
 
     assert result.performed is False
     assert result.status == AIStatus.UNAVAILABLE
@@ -153,12 +164,14 @@ async def test_provider_failure_keeps_local_checks(monkeypatch) -> None:
 
 
 def test_analyzer_uses_local_fallback_without_api_key() -> None:
-    analyzer = build_payment_text_analyzer(Settings(openai_api_key=None))
+    analyzer = build_payment_text_analyzer(Settings(gemini_api_key=None))
 
     assert isinstance(analyzer, FallbackPaymentTextAnalyzer)
 
 
-def test_analyzer_selects_ollama_without_a_hosted_key() -> None:
-    analyzer = build_payment_text_analyzer(Settings(ai_provider="ollama"))
+def test_analyzer_selects_gemini_with_a_hosted_key() -> None:
+    analyzer = build_payment_text_analyzer(
+        Settings(ai_provider="gemini", gemini_api_key="test-key")
+    )
 
-    assert isinstance(analyzer, OllamaPaymentTextAnalyzer)
+    assert isinstance(analyzer, GeminiPaymentTextAnalyzer)

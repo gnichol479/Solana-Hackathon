@@ -18,7 +18,7 @@ async def test_health_endpoint(client: httpx.AsyncClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["ai_provider"] in {"local", "openai", "ollama"}
+    assert response.json()["ai_provider"] in {"local", "gemini"}
     assert isinstance(response.json()["ai_configured"], bool)
 
 

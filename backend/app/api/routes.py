@@ -29,8 +29,8 @@ async def health() -> dict[str, str | bool]:
         "environment": settings.app_env,
         "solana_network": settings.solana_network,
         "ai_provider": settings.ai_provider,
-        "ai_configured": settings.ai_provider == "ollama"
-        or bool((settings.openai_api_key or "").strip()),
+        "ai_configured": settings.ai_provider == "gemini"
+        and bool((settings.gemini_api_key or "").strip()),
     }
 
 

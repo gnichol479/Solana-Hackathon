@@ -1,3 +1,4 @@
+import json
 import re
 from typing import Literal, Protocol
 
@@ -55,7 +56,62 @@ Use severity info or warning; do not declare a person or wallet fraudulent.
 Do not claim identity, recipient ownership, payment safety, or blockchain activity is verified.
 Urgency, unusual secrecy, changed instructions, unexpected payment methods, and
 mismatched details may be warning signs, not proof. If no supported signal exists,
-return an empty indicators list. Do not infer missing amounts, recipients, or identities."""
+return an empty indicators list. Do not infer missing amounts, recipients, or identities.
+Always include evidence and next_action as strings; use an empty string when there is
+no exact quote or no practical next step."""
+
+
+# Gemini structured output accepts a JSON-Schema subset. Keep this schema explicit
+# instead of sending Pydantic's $defs so the request works across Gemini models.
+_GEMINI_FINDINGS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "indicators": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "Lowercase stable identifier for the warning.",
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "message",
+                            "impersonation",
+                            "payment_instructions",
+                            "url",
+                            "invoice",
+                            "recipient",
+                            "other",
+                        ],
+                    },
+                    "severity": {"type": "string", "enum": ["info", "warning"]},
+                    "message": {"type": "string"},
+                    "evidence": {
+                        "type": "string",
+                        "description": "Exact short quote from the submitted text, or an empty string.",
+                    },
+                    "next_action": {
+                        "type": "string",
+                        "description": "Independent verification step, or an empty string.",
+                    },
+                },
+                "required": [
+                    "code",
+                    "category",
+                    "severity",
+                    "message",
+                    "evidence",
+                    "next_action",
+                ],
+            },
+        }
+    },
+    "required": ["indicators"],
+}
 
 
 class FallbackPaymentTextAnalyzer:
@@ -128,12 +184,31 @@ class FallbackPaymentTextAnalyzer:
         )
 
 
-class OpenAIPaymentTextAnalyzer:
-    """Optional schema-validated OpenAI adapter with safe local fallback behavior."""
+def _extract_gemini_text(payload: dict) -> str:
+    candidates = payload.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        raise ValueError("Gemini returned no candidates.")
+    content = candidates[0].get("content", {})
+    parts = content.get("parts", []) if isinstance(content, dict) else []
+    text = "".join(
+        part.get("text", "")
+        for part in parts
+        if isinstance(part, dict) and isinstance(part.get("text", ""), str)
+    ).strip()
+    if not text:
+        raise ValueError("Gemini returned no text.")
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
+    return text
 
-    def __init__(self, api_key: str, model: str, timeout_seconds: float) -> None:
+
+class GeminiPaymentTextAnalyzer:
+    """Schema-validated Gemini adapter with safe local fallback behavior."""
+
+    def __init__(self, api_key: str, model: str, base_url: str, timeout_seconds: float) -> None:
         self._api_key = api_key
         self._model = model
+        self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._fallback = FallbackPaymentTextAnalyzer()
 
@@ -145,34 +220,30 @@ class OpenAIPaymentTextAnalyzer:
                 follow_redirects=False,
             ) as client:
                 response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {self._api_key}"},
+                    f"{self._base_url}/models/{self._model}:generateContent",
+                    headers={
+                        "x-goog-api-key": self._api_key,
+                        "Content-Type": "application/json",
+                    },
                     json={
-                        "model": self._model,
-                        "messages": [
-                            {"role": "system", "content": _SYSTEM_PROMPT},
-                            {"role": "user", "content": text},
-                        ],
-                        "response_format": {
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": "payment_scam_findings",
-                                "strict": False,
-                                "schema": _Findings.model_json_schema(),
-                            },
+                        "systemInstruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
+                        "contents": [{"role": "user", "parts": [{"text": text}]}],
+                        "generationConfig": {
+                            "temperature": 0,
+                            "maxOutputTokens": 2_000,
+                            "responseMimeType": "application/json",
+                            "responseSchema": _GEMINI_FINDINGS_SCHEMA,
                         },
-                        "max_completion_tokens": 2_000,
                     },
                 )
                 response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"]
-            findings = _Findings.model_validate_json(content)
-        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+                findings = _Findings.model_validate_json(_extract_gemini_text(response.json()))
+        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, json.JSONDecodeError):
             return local.model_copy(
                 update={
                     "status": AIStatus.UNAVAILABLE,
                     "explanation": (
-                        "AI analysis could not be completed. Local text checks remain available; "
+                        "Gemini analysis could not be completed. Local text checks remain available; "
                         "verify the recipient independently."
                     ),
                 }
@@ -182,92 +253,6 @@ class OpenAIPaymentTextAnalyzer:
         seen_codes = {indicator.code for indicator in indicators}
         for finding in findings.indicators:
             # A model-generated claim is shown only alongside a verbatim quote from the input.
-            if (
-                finding.code in seen_codes
-                or not finding.evidence
-                or finding.evidence not in text
-            ):
-                continue
-            indicators.append(
-                Indicator(
-                    code=finding.code,
-                    category=finding.category,
-                    severity=IndicatorSeverity(finding.severity),
-                    source=IndicatorSource.AI,
-                    message=finding.message,
-                    evidence=finding.evidence,
-                    next_action=finding.next_action,
-                )
-            )
-            seen_codes.add(finding.code)
-
-        count = len(indicators)
-        if count:
-            explanation = (
-                f"Analysis identified {count} potential warning pattern(s). Review the quoted "
-                "evidence and verify the payment through a trusted channel; this is not a "
-                "determination of fraud."
-            )
-        else:
-            explanation = (
-                "No specific warning pattern was supported by the submitted text. This does not "
-                "verify the recipient or establish that the payment is safe."
-            )
-
-        return AIAnalysis(
-            performed=True,
-            status=AIStatus.OK,
-            indicators=indicators,
-            explanation=explanation,
-        )
-
-
-class OllamaPaymentTextAnalyzer:
-    """Local Ollama adapter; no API key or hosted provider is required."""
-
-    def __init__(self, base_url: str, model: str, timeout_seconds: float) -> None:
-        self._base_url = base_url.rstrip("/")
-        self._model = model
-        self._timeout_seconds = timeout_seconds
-        self._fallback = FallbackPaymentTextAnalyzer()
-
-    async def analyze(self, text: str) -> AIAnalysis:
-        local = await self._fallback.analyze(text)
-        try:
-            async with httpx.AsyncClient(
-                timeout=self._timeout_seconds,
-                follow_redirects=False,
-            ) as client:
-                response = await client.post(
-                    f"{self._base_url}/api/chat",
-                    json={
-                        "model": self._model,
-                        "messages": [
-                            {"role": "system", "content": _SYSTEM_PROMPT},
-                            {"role": "user", "content": text},
-                        ],
-                        "format": _Findings.model_json_schema(),
-                        "stream": False,
-                        "options": {"temperature": 0},
-                    },
-                )
-                response.raise_for_status()
-                content = response.json()["message"]["content"]
-            findings = _Findings.model_validate_json(content)
-        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
-            return local.model_copy(
-                update={
-                    "status": AIStatus.UNAVAILABLE,
-                    "explanation": (
-                        "The local AI model was unavailable. Local text checks remain available; "
-                        "verify the recipient independently."
-                    ),
-                }
-            )
-
-        indicators = list(local.indicators)
-        seen_codes = {indicator.code for indicator in indicators}
-        for finding in findings.indicators:
             if (
                 finding.code in seen_codes
                 or not finding.evidence
@@ -305,20 +290,14 @@ class OllamaPaymentTextAnalyzer:
 
 
 def build_payment_text_analyzer(settings: Settings) -> PaymentTextAnalyzer:
-    """Select the configured AI adapter, otherwise keep analysis fully local."""
+    """Select Gemini when configured, otherwise keep analysis fully local."""
 
-    if settings.ai_provider == "ollama":
-        return OllamaPaymentTextAnalyzer(
-            base_url=settings.ollama_base_url,
-            model=settings.ollama_model,
-            timeout_seconds=settings.ai_timeout_seconds,
-        )
-
-    api_key = (settings.openai_api_key or "").strip()
-    if settings.ai_provider != "openai" or not api_key:
+    api_key = (settings.gemini_api_key or "").strip()
+    if settings.ai_provider != "gemini" or not api_key:
         return FallbackPaymentTextAnalyzer()
-    return OpenAIPaymentTextAnalyzer(
+    return GeminiPaymentTextAnalyzer(
         api_key=api_key,
-        model=settings.openai_model,
+        model=settings.gemini_model,
+        base_url=settings.gemini_base_url,
         timeout_seconds=settings.ai_timeout_seconds,
     )

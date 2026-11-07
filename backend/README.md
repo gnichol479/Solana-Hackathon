@@ -36,25 +36,24 @@ Git.
 
 ## AI analysis
 
-The backend can use local Ollama, OpenAI, or only deterministic checks. Each
-model finding must include an exact quote from the submitted text; unsupported
-quotes are discarded. If the selected provider is unavailable, local checks
-still run and the response reports that AI analysis was unavailable.
+The backend uses Gemini for optional AI-assisted findings or only deterministic
+checks when no Gemini key is configured. Each model finding must include an
+exact quote from the submitted text; unsupported quotes are discarded. If the
+provider is unavailable, local checks still run and the response reports that
+AI analysis was unavailable.
 
-For the no-cost local setup, install Ollama for Windows, run `ollama pull
-llama3.2`, and use these backend settings:
+Create a Gemini API key in Google AI Studio and keep it only in the backend
+environment. Use these settings:
 
 ```env
-AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.2
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-server-side-key
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 ```
 
-The Ollama API stays on the local machine. The backend never sends the request
-to a hosted AI provider when `AI_PROVIDER=ollama`.
-
-The OpenAI option remains available by setting `AI_PROVIDER=openai`,
-`OPENAI_API_KEY`, and `OPENAI_MODEL`. Never commit `.env` files or API keys.
+Never commit `.env` files or API keys. The frontend and browser extension call
+the backend; they never receive the Gemini key.
 
 After setting the key, restart the backend and check `GET /api/health` for
 `"ai_configured": true`. A successful analysis then reports

@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 SolanaNetwork = Literal["devnet", "testnet", "mainnet-beta"]
-AIProvider = Literal["local", "openai", "ollama"]
+AIProvider = Literal["local", "gemini"]
 
 
 class Settings(BaseSettings):
@@ -19,11 +19,10 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["development", "test", "production"] = "development"
-    ai_provider: AIProvider = "local"
-    openai_api_key: str | None = Field(default=None, repr=False)
-    openai_model: str = "gpt-4.1-mini"
-    ollama_base_url: str = "http://127.0.0.1:11434"
-    ollama_model: str = "llama3.2"
+    ai_provider: AIProvider = "gemini"
+    gemini_api_key: str | None = Field(default=None, repr=False)
+    gemini_model: str = "gemini-3.5-flash-lite"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
     ai_timeout_seconds: float = Field(default=25.0, gt=0, le=60)
     solana_network: SolanaNetwork = "devnet"
     solana_rpc_url: str = "https://api.devnet.solana.com"
