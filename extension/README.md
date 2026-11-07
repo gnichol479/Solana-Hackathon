@@ -1,6 +1,6 @@
-# Payment Lens Chrome Extension
+# Bait Chrome Extension
 
-Manifest V3 popup for quick, user initiated payment request analysis. It matches the website's dark forest background, mint accent, DM Sans / Manrope typography, and careful risk language.
+Manifest V3 popup for quick, user initiated payment request analysis. It matches the website's dark forest background, mint fish mascot, and careful risk language.
 
 ## Load in Chrome
 

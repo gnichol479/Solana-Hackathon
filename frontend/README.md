@@ -1,6 +1,6 @@
-# Payment Lens frontend
+# Bait frontend
 
-Person 3's React website. Payment Lens is a temporary product name; change it when the team agrees on branding.
+Person 3's React website for Bait, the team's payment scam analysis platform.
 
 ## Run
 

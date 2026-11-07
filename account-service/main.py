@@ -34,7 +34,7 @@ if not INSECURE and not ORIGIN.startswith('https://'):
 SESSION_SECONDS=min(int(os.getenv('LENS_SESSION_SECONDS','3600')),86400)
 hasher=PasswordHasher(time_cost=3,memory_cost=65536,parallelism=2)
 DUMMY_HASH=hasher.hash(secrets.token_urlsafe(32))
-app=FastAPI(title='Payment Lens account and evidence service')
+app=FastAPI(title='Bait account and evidence service')
 app.add_middleware(CORSMiddleware,allow_origins=[ORIGIN],allow_credentials=True,
                    allow_methods=['GET','POST','PUT','DELETE'],allow_headers=['Content-Type','X-CSRF-Token'])
 
@@ -185,7 +185,7 @@ def reset_request(body:EmailBody,request:Request):
         with db() as c:
             c.execute('DELETE FROM resets WHERE user_id=?',(user['id'],))
             c.execute('INSERT INTO resets VALUES(?,?,?)',(digest(token),user['id'],time.time()+900))
-        message=EmailMessage();message['From']=sender;message['To']=user['email'];message['Subject']='Reset your Payment Lens password'
+        message=EmailMessage();message['From']=sender;message['To']=user['email'];message['Subject']='Reset your Bait password'
         message.set_content(f'Reset your password within 15 minutes: {ORIGIN}/#account?token={quote(token)}\nIgnore this email if you did not request it.')
         try:
             with smtplib.SMTP(host,int(os.getenv('SMTP_PORT','587')),timeout=15) as smtp:
@@ -229,7 +229,7 @@ class PasskeyVerify(BaseModel):
 def registration_options(s=Depends(session)):
     strong(s);throttle('passkey-register:'+s['user_id'],limit=10)
     with db() as c:keys=c.execute('SELECT id FROM passkeys WHERE user_id=?',(s['user_id'],)).fetchall()
-    opts=generate_registration_options(rp_id=RP,rp_name='Payment Lens',user_name=s['email'],user_id=s['user_id'].encode(),authenticator_selection=AuthenticatorSelectionCriteria(resident_key=ResidentKeyRequirement.REQUIRED,user_verification=UserVerificationRequirement.REQUIRED),exclude_credentials=[PublicKeyCredentialDescriptor(id=unb64(k['id'])) for k in keys])
+    opts=generate_registration_options(rp_id=RP,rp_name='Bait',user_name=s['email'],user_id=s['user_id'].encode(),authenticator_selection=AuthenticatorSelectionCriteria(resident_key=ResidentKeyRequirement.REQUIRED,user_verification=UserVerificationRequirement.REQUIRED),exclude_credentials=[PublicKeyCredentialDescriptor(id=unb64(k['id'])) for k in keys])
     return challenge('register',s['user_id'],opts,s['token'])
 
 @app.post('/api/auth/passkeys/register/verify')

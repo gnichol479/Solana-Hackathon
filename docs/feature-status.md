@@ -1,4 +1,4 @@
-# Payment Lens feature status
+# Bait feature status
 
 ## Available in the static website
 

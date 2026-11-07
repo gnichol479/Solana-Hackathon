@@ -1,6 +1,6 @@
 # Solana Hackathon — Complete Team Project Briefing
 
-**Project Name:** TBD — The team has not finalized a name.
+**Project Name:** Bait
 
 **Project Category:** AI, Cybersecurity, FinTech, Solana Blockchain
 
@@ -8,7 +8,7 @@
 
 **Project Status:** Planning / Early Development
 
-**Main Goal:** Build an AI-powered payment scam detection platform that helps people identify suspicious payment requests before sending money.
+**Main Goal:** Build Bait, an AI-powered payment scam detection platform that helps people identify suspicious payment requests before sending money.
 
 ---
 

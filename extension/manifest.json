@@ -1,11 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "Payment Lens — Check Before You Pay",
+  "name": "Bait — Check Before You Pay",
   "version": "1.0.0",
   "description": "Take a second look at a payment request before you send money.",
+  "icons": {
+    "16": "icons/fish-16.png",
+    "32": "icons/fish-32.png",
+    "48": "icons/fish-48.png",
+    "128": "icons/fish-128.png"
+  },
   "action": {
-    "default_title": "Check with Payment Lens",
-    "default_popup": "popup.html"
+    "default_title": "Check with Bait",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/fish-16.png",
+      "32": "icons/fish-32.png"
+    }
   },
   "permissions": ["storage", "activeTab", "scripting"],
   "optional_host_permissions": ["http://*/*", "https://*/*"]
