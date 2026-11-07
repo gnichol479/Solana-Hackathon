@@ -78,6 +78,7 @@ class Indicator(BaseModel):
     source: IndicatorSource
     message: str
     evidence: str | None = None
+    next_action: str | None = Field(default=None, max_length=1_000)
 
 
 class AIAnalysis(BaseModel):
