@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
-from app.config import get_settings
+from app.config import SolanaNetwork, get_settings
 from app.models.schemas import AnalysisRequest, AnalysisResponse, SolanaAnalysis
 from app.services.ai_gateway import FallbackPaymentTextAnalyzer
 from app.services.payment_detection import detect_payment_request
@@ -58,5 +58,8 @@ async def analyze(request: AnalysisRequest) -> AnalysisResponse:
 
 
 @router.get("/solana/wallet/{address}", response_model=SolanaAnalysis)
-async def analyze_solana_wallet(address: str) -> SolanaAnalysis:
-    return await solana_service.analyze(address)
+async def analyze_solana_wallet(
+    address: str,
+    network: SolanaNetwork | None = Query(default=None),
+) -> SolanaAnalysis:
+    return await solana_service.analyze(address, network=network)
